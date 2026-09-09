@@ -3,7 +3,8 @@ from supabase import create_client
 
 # Asegúrate de que esta sea la URL de tu proyecto actual y tu clave 'anon public'
 SUPABASE_URL = "https://efqckksjhldyxmokmcfd.supabase.co"
-SUPABASE_KEY = "TU_ANON_KEY_AQUI"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcWNra3NqaGxkeXhtb2ttY2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MzM0NjYsImV4cCI6MjEwNDUwOTQ2Nn0._q0FRMevxqLmAiYUb9wBzDLIzyqXQblhuIhn6FCXvxU
+"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="Citas Médicas", page_icon="🩺")
