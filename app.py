@@ -1,7 +1,7 @@
 import streamlit as st
 from supabase import create_client
 
-SUPABASE_URL = "https://efqckksjhldyxmokmcfd.supabase.co/rest/v1/Citas"
+SUPABASE_URL = "https://efqckksjhldyxmokmcfd.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcWNra3NqaGxkeXhtb2ttY2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MzM0NjYsImV4cCI6MjEwNDUwOTQ2Nn0._q0FRMevxqLmAiYUb9wBzDLIzyqXQblhuIhn6FCXvxU"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
