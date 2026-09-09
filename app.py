@@ -1,36 +1,57 @@
 import streamlit as st
 from supabase import create_client
 
-SUPABASE_URL = "https://efqckksjhldyxmokmcfd.supabase.co/rest/v1/Citas"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcWNra3NqaGxkeXhtb2ttY2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MzM0NjYsImV4cCI6MjEwNDUwOTQ2Nn0._q0FRMevxqLmAiYUb9wBzDLIzyqXQblhuIhn6FCXvxU"
+SUPABASE_URL = "https://efqckksjhldyxmokmcfd.supabase.co/rest/v1/horarios_disponibles"
+SUPABASE_KEY = "TU_ANON_KEY_AQUI"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="Citas Médicas", page_icon="🩺")
-st.title("🩺 Gestor de Citas")
+st.title("🩺 Reserva de Citas")
 st.subheader("Salud Ocupacional")
 
-with st.form("form_cita", clear_on_submit=True):
-    clave = st.text_input("Clave o Número de Empleado:")
-    fecha = st.date_input("Fecha preferida:")
-    hora = st.time_input("Hora preferida:")
-    motivo = st.selectbox("Motivo:", [
+clave = st.text_input("Clave de Empleado:")
+fecha_sel = st.date_input("Selecciona la fecha:")
+
+# Buscar en Supabase los horarios libres creados por el médico para esa fecha
+respuesta = supabase.table("horarios_disponibles")\
+    .select("hora")\
+    .eq("fecha", str(fecha_sel))\
+    .eq("disponible", True)\
+    .execute()
+
+horas_libres = [item["hora"] for item in respuesta.data] if respuesta.data else []
+
+if not horas_libres:
+    st.warning("⚠️ No hay horarios disponibles para esta fecha. Selecciona otro día.")
+else:
+    hora_sel = st.selectbox("Horarios Disponibles:", horas_libres)
+    motivo = st.selectbox("Motivo de consulta:", [
         "Examen Periódico", 
         "Consulta General", 
         "Evaluación Ergonómica", 
         "Valoración de Egreso"
     ])
-    submit = st.form_submit_button("Agendar Cita")
-
-if submit:
-    if not clave.strip():
-        st.error("Por favor ingresa tu clave.")
-    else:
-        nueva_cita = {
-            "clave": clave,
-            "fecha": str(fecha),
-            "hora": str(hora),
-            "motivo": motivo,
-            "estado": "Pendiente"
-        }
-        supabase.table("citas").insert(nueva_cita).execute()
-        st.success("¡Cita agendada correctamente!")
+    
+    if st.button("Confirmar Cita"):
+        if not clave.strip():
+            st.error("Por favor ingresa tu clave de empleado.")
+        else:
+            # 1. Agendar la cita
+            nueva_cita = {
+                "clave": clave,
+                "fecha": str(fecha_sel),
+                "hora": hora_sel,
+                "motivo": motivo,
+                "estado": "Pendiente"
+            }
+            supabase.table("citas").insert(nueva_cita).execute()
+            
+            # 2. Bloquear el horario para que nadie más lo tome
+            supabase.table("horarios_disponibles")\
+                .update({"disponible": False})\
+                .eq("fecha", str(fecha_sel))\
+                .eq("hora", hora_sel)\
+                .execute()
+                
+            st.success("¡Cita agendada con éxito!")
+            st.rerun()
