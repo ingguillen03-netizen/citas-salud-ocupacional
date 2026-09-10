@@ -3,13 +3,15 @@ from supabase import create_client
 from datetime import datetime, date
 
 SUPABASE_URL = "https://efqckksjhldyxmokmcfd.supabase.co"
+# ⚠️ REEMPLAZA ESTA CLAVE CON TU SUPABASE ANON KEY ⚠️
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcWNra3NqaGxkeXhtb2ttY2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MzM0NjYsImV4cCI6MjEwNDUwOTQ2Nn0._q0FRMevxqLmAiYUb9wBzDLIzyqXQblhuIhn6FCXvxU"
+
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-st.set_page_config(page_title="Salud Ocupacional - Citas", page_icon="🩺", layout="centered")
+st.set_page_config(page_title="Salud Ocupacional & Telemedicina", page_icon="🩺", layout="centered")
 
-st.title("🩺 Portal de Salud Ocupacional")
-st.caption("Atención Médica y Vigilancia de la Salud")
+st.title("🩺 Portal de Salud Ocupacional & Telemedicina")
+st.caption("Atención Médica en Planta y Cobertura a Sucursales / Regiones")
 
 tab1, tab2 = st.tabs(["📅 Agendar Cita", "🔍 Consultar Mis Citas"])
 
@@ -19,8 +21,22 @@ tab1, tab2 = st.tabs(["📅 Agendar Cita", "🔍 Consultar Mis Citas"])
 with tab1:
     st.subheader("Reserva de Consulta Médica")
     
-    clave = st.text_input("Clave de Empleado:", placeholder="Ej. EMP-1024")
-    fecha_sel = st.date_input("Selecciona la fecha:", min_value=date.today())
+    col_nom, col_clav = st.columns([2, 1])
+    with col_nom:
+        nombre = st.text_input("Nombre Completo del Trabajador:*", placeholder="Ej. Juan Carlos Pérez López")
+    with col_clav:
+        clave = st.text_input("Clave / ID Empleado (opcional):", placeholder="Ej. EMP-1024")
+    
+    col_mod, col_suc = st.columns([1, 1])
+    with col_mod:
+        modalidad = st.selectbox(
+            "Modalidad de Atención:*",
+            ["Presencial (Planta Principal)", "A Distancia / Telemedicina (Sucursales/Regiones)"]
+        )
+    with col_suc:
+        sucursal = st.text_input("Sucursal / Región / Área:*", placeholder="Ej. Planta Central, Sucursal Norte...")
+
+    fecha_sel = st.date_input("Selecciona la fecha para tu cita:", min_value=date.today())
 
     try:
         # Obtener horarios libres en Supabase
@@ -33,7 +49,7 @@ with tab1:
         horas_libres = sorted([item["hora"] for item in respuesta.data]) if respuesta.data else []
 
         if not horas_libres:
-            st.warning("⚠️ No hay horarios disponibles para esta fecha. Intenta seleccionando otro día.")
+            st.warning("⚠️ No hay horarios disponibles habilitados para esta fecha. Intenta seleccionando otro día.")
         else:
             hora_sel = st.selectbox("Horarios Disponibles:", horas_libres)
             
@@ -51,18 +67,24 @@ with tab1:
 
             col1, col2 = st.columns(2)
             with col1:
-                tiempo_sintomas = st.selectbox("Tiempo con síntoma:", ["Hoy empezó", "1 a 3 días", "Más de una semana", "N/A"])
+                tiempo_sintomas = st.selectbox("Tiempo con síntoma:", ["Hoy empezó", "1 a 3 días", "Más de una semana", "N/A - Seguimiento"])
             with col2:
                 urgencia = st.select_slider("Nivel de malestar:", options=["Bajo", "Leve", "Moderado", "Alto"])
 
-            observaciones = st.text_area("Notas / Sintomatología adicional (opcional):", placeholder="Ej. Dolor articular al realizar cargas...")
+            observaciones = st.text_area("Notas / Sintomatología adicional (opcional):", placeholder="Ej. Solicitud de valoración a distancia por malestar articular...")
+
+            if "Telemedicina" in modalidad:
+                st.info("ℹ️ **Atención Virtual:** Al confirmarse tu cita, se generará un enlace de videollamada (Google Meet / Zoom) que podrás ver en la pestaña 'Consultar Mis Citas'.")
 
             if st.button("Confirmar Solicitud de Cita", type="primary", use_container_width=True):
-                if not clave.strip():
-                    st.error("Por favor ingresa tu clave de empleado.")
+                if not nombre.strip():
+                    st.error("Por favor ingresa tu Nombre Completo para poder agendar.")
                 else:
                     nueva_cita = {
-                        "clave": clave,
+                        "nombre": nombre,
+                        "clave": clave if clave.strip() else "S/N",
+                        "modalidad": modalidad,
+                        "sucursal": sucursal if sucursal.strip() else "Planta Principal",
                         "fecha": str(fecha_sel),
                         "hora": hora_sel,
                         "motivo": tipo_atencion,
@@ -70,11 +92,12 @@ with tab1:
                         "tiempo_sintomas": tiempo_sintomas,
                         "urgencia": urgencia,
                         "observaciones": observaciones,
-                        "estado": "Pendiente"
+                        "estado": "Pendiente",
+                        "link_reunion": ""
                     }
                     
                     # 1. Insertar la cita
-                    res_ins = supabase.table("citas").insert(nueva_cita).execute()
+                    supabase.table("citas").insert(nueva_cita).execute()
                     
                     # 2. Bloquear horario
                     supabase.table("horarios_disponibles")\
@@ -90,12 +113,13 @@ with tab1:
                     with st.container():
                         st.info(f"""
                         ### 📄 Resumen de Solicitud
-                        * **Empleado:** `{clave}`
+                        * **Empleado:** {nombre} `({clave if clave.strip() else 'Sin N°'})`
+                        * **Ubicación / Modalidad:** {modalidad} | *{sucursal}*
                         * **Fecha solicitada:** {fecha_sel} a las {hora_sel} hrs.
                         * **Tipo de atención:** {tipo_atencion}
                         * **Estado actual:** 🟡 *Pendiente de aprobación por el área médica*
                         
-                        *Puedes revisar la evolución de tu solicitud en la pestaña 'Consultar Mis Citas'.*
+                        *Guarda tu nombre o clave para consultar el estatus o enlace de videollamada en la pestaña 'Consultar Mis Citas'.*
                         """)
 
     except Exception as e:
@@ -105,29 +129,32 @@ with tab1:
 # PESTAÑA 2: CONSULTAR Y REAGENDAR CITAS
 # -------------------------------------------------------------
 with tab2:
-    st.subheader("Consultar Estatus de Solicitudes")
-    clave_busqueda = st.text_input("Ingresa tu Clave de Empleado para consultar:", key="buscar_clave")
+    st.subheader("Consultar Estatus de Solicitudes y Enlaces Virtuales")
+    busqueda = st.text_input("Ingresa tu Nombre Completo o Clave de Empleado para consultar:", key="buscar_empleado")
     
     if st.button("Buscar Citas", use_container_width=True):
-        if not clave_busqueda.strip():
-            st.warning("Por favor escribe tu clave para buscar.")
+        if not busqueda.strip():
+            st.warning("Por favor escribe tu nombre o clave para buscar.")
         else:
             try:
-                citas_user = supabase.table("citas")\
+                # Búsqueda flexible por nombre o clave
+                res = supabase.table("citas")\
                     .select("*")\
-                    .eq("clave", clave_busqueda)\
+                    .or_(f"clave.ilike.%{busqueda}%,nombre.ilike.%{busqueda}%")\
                     .order("id", desc=True)\
-                    .execute().data
+                    .execute()
+                
+                citas_user = res.data
                 
                 if not citas_user:
-                    st.info("No se encontraron citas asociadas a esta clave.")
+                    st.info("No se encontraron citas asociadas a esa búsqueda.")
                 else:
                     ahora = datetime.now()
                     
                     for cita in citas_user:
-                        with st.expander(f"Cita #{cita['id']} - {cita['fecha']} ({cita['hora']})", expanded=True):
+                        nom_disp = cita.get('nombre') or 'Empleado'
+                        with st.expander(f"Cita #{cita['id']} - {nom_disp} | {cita['fecha']} ({cita['hora']})", expanded=True):
                             
-                            # Determinar si la cita ya venció
                             dt_cita = datetime.strptime(f"{cita['fecha']} {cita['hora']}", "%Y-%m-%d %H:%M:%S")
                             vencida = (dt_cita < ahora) and (cita['estado'] == 'Pendiente')
                             
@@ -141,13 +168,24 @@ with tab2:
                                 estado_fmt = f"🔴 {cita['estado'].upper()}"
 
                             st.markdown(f"**Estatus:** {estado_fmt}")
-                            st.write(f"**Atención:** {cita.get('es_laboral', cita.get('motivo'))}")
+                            st.write(f"**Empleado:** {nom_disp} (Clave: `{cita.get('clave', 'S/N')}`)")
+                            st.write(f"**Modalidad / Ubicación:** {cita.get('modalidad', 'Presencial')} | *{cita.get('sucursal', 'N/A')}*")
+                            st.write(f"**Tipo de Atención:** {cita.get('es_laboral', cita.get('motivo'))}")
+                            
                             if cita.get('observaciones'):
                                 st.caption(f"Notas: {cita['observaciones']}")
 
-                            # Si venció o requiere reagendar
+                            # Si la cita es Virtual / Telemedicina y ya tiene link asignado por el médico
+                            link_meet = cita.get('link_reunion')
+                            if link_meet and link_meet.strip():
+                                st.success("📹 **Enlace de Videollamada Disponible:**")
+                                st.link_button("💻 Entrar a la Cita Virtual (Google Meet / Zoom)", link_meet)
+                            elif "Telemedicina" in str(cita.get('modalidad')) and cita['estado'] == 'Confirmada':
+                                st.info("ℹ️ Cita confirmada. El enlace de videollamada será publicado por el médico momentos antes de la consulta.")
+
+                            # Si venció la cita, opción de reagendar
                             if vencida:
-                                st.warning("⚠️ Esta cita no fue procesada a tiempo por el equipo médico antes del horario solicitado.")
+                                st.warning("⚠️ Esta cita no fue procesada a tiempo antes del horario solicitado.")
                                 st.subheader("🔄 Reagendar Cita")
                                 nueva_fecha = st.date_input("Nueva fecha:", key=f"f_{cita['id']}", min_value=date.today())
                                 
@@ -162,14 +200,12 @@ with tab2:
                                 if nuevas_horas:
                                     nueva_hora = st.selectbox("Selecciona un nuevo horario libre:", nuevas_horas, key=f"h_{cita['id']}")
                                     if st.button("Confirmar Reagendamiento", key=f"btn_reag_{cita['id']}"):
-                                        # Actualizar fecha y hora en la cita
                                         supabase.table("citas").update({
                                             "fecha": str(nueva_fecha),
                                             "hora": nueva_hora,
                                             "estado": "Pendiente"
                                         }).eq("id", cita['id']).execute()
                                         
-                                        # Bloquear la nueva hora
                                         supabase.table("horarios_disponibles").update({"disponible": False})\
                                             .eq("fecha", str(nueva_fecha))\
                                             .eq("hora", nueva_hora)\
