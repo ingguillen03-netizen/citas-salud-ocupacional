@@ -17,7 +17,7 @@ tab1, tab2 = st.tabs(["📅 Agendar Cita", "🔍 Consultar Mis Citas"])
 # PESTAÑA 1: AGENDAR CITA
 # -------------------------------------------------------------
 with tab1:
-    st.subheader("Reserva de Consulta Médica")
+    st.subheader("Clasificación de la Consulta")
     
     clave = st.text_input("Clave de Empleado:", placeholder="Ej. EMP-1024")
     fecha_sel = st.date_input("Selecciona la fecha:", min_value=date.today())
@@ -38,12 +38,15 @@ with tab1:
             hora_sel = st.selectbox("Horarios Disponibles:", horas_libres)
             
             st.divider()
-            motivo = st.selectbox("Motivo principal:", [
-                "Consulta General / Malestar",
-                "Examen Médico Periódico",
-                "Evaluación Ergonómica",
-                "Valoración por Incapacidad",
-                "Examen de Ingreso / Egreso"
+            tipo_atencion = st.radio(
+    "Selecciona el Tipo / Origen de la Atención Médica:",
+    [
+        "Enfermedad General (Consulta Aguda)",
+        "Riesgo de Trabajo (Seguimiento de Accidente / Trámites ST)",
+        "Control de Maternidad / Prenatal",
+        "Control Crónico-Degenerativo (Diabetes, Hipertensión, Obesidad)"
+    ]
+)
             ])
 
             es_laboral = st.radio(
