@@ -3,7 +3,7 @@ from supabase import create_client
 from datetime import datetime, date
 
 SUPABASE_URL = "https://efqckksjhldyxmokmcfd.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmcWNra3NqaGxkeXhtb2ttY2ZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg5MzM0NjYsImV4cCI6MjEwNDUwOTQ2Nn0._q0FRMevxqLmAiYUb9wBzDLIzyqXQblhuIhn6FCXvxU"
+SUPABASE_KEY = "TU_ANON_KEY_AQUI"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="Salud Ocupacional - Citas", page_icon="🩺", layout="centered")
@@ -17,7 +17,7 @@ tab1, tab2 = st.tabs(["📅 Agendar Cita", "🔍 Consultar Mis Citas"])
 # PESTAÑA 1: AGENDAR CITA
 # -------------------------------------------------------------
 with tab1:
-    st.subheader("Clasificación de la Consulta")
+    st.subheader("Reserva de Consulta Médica")
     
     clave = st.text_input("Clave de Empleado:", placeholder="Ej. EMP-1024")
     fecha_sel = st.date_input("Selecciona la fecha:", min_value=date.today())
@@ -38,20 +38,15 @@ with tab1:
             hora_sel = st.selectbox("Horarios Disponibles:", horas_libres)
             
             st.divider()
+            
             tipo_atencion = st.radio(
-    "Selecciona el Tipo / Origen de la Atención Médica:",
-    [
-        "Enfermedad General (Consulta Aguda)",
-        "Riesgo de Trabajo (Seguimiento de Accidente / Trámites ST)",
-        "Control de Maternidad / Prenatal",
-        "Control Crónico-Degenerativo (Diabetes, Hipertensión, Obesidad)"
-    ]
-)
-            ])
-
-            es_laboral = st.radio(
-                "¿Relacionado con trabajo o accidente laboral?",
-                ["No / Enfermedad común", "Sí / Trabajo en planta", "Incidente de trayecto"]
+                "Selecciona el Tipo / Origen de la Atención Médica:",
+                [
+                    "Enfermedad General (Consulta Aguda)",
+                    "Riesgo de Trabajo (Seguimiento de Accidente / Trámites ST)",
+                    "Control de Maternidad / Prenatal",
+                    "Control Crónico-Degenerativo (Diabetes, Hipertensión, Obesidad)"
+                ]
             )
 
             col1, col2 = st.columns(2)
@@ -70,8 +65,8 @@ with tab1:
                         "clave": clave,
                         "fecha": str(fecha_sel),
                         "hora": hora_sel,
-                        "motivo": motivo,
-                        "es_laboral": es_laboral,
+                        "motivo": tipo_atencion,
+                        "es_laboral": tipo_atencion,
                         "tiempo_sintomas": tiempo_sintomas,
                         "urgencia": urgencia,
                         "observaciones": observaciones,
@@ -97,7 +92,7 @@ with tab1:
                         ### 📄 Resumen de Solicitud
                         * **Empleado:** `{clave}`
                         * **Fecha solicitada:** {fecha_sel} a las {hora_sel} hrs.
-                        * **Motivo:** {motivo}
+                        * **Tipo de atención:** {tipo_atencion}
                         * **Estado actual:** 🟡 *Pendiente de aprobación por el área médica*
                         
                         *Puedes revisar la evolución de tu solicitud en la pestaña 'Consultar Mis Citas'.*
@@ -146,7 +141,7 @@ with tab2:
                                 estado_fmt = f"🔴 {cita['estado'].upper()}"
 
                             st.markdown(f"**Estatus:** {estado_fmt}")
-                            st.write(f"**Motivo:** {cita['motivo']} | **Relación laboral:** {cita['es_laboral']}")
+                            st.write(f"**Atención:** {cita.get('es_laboral', cita.get('motivo'))}")
                             if cita.get('observaciones'):
                                 st.caption(f"Notas: {cita['observaciones']}")
 
